@@ -1,0 +1,388 @@
+package cloudSearch;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.fluent.Request;
+import org.apache.http.client.fluent.Response;
+import org.apache.http.entity.ContentType;
+
+import cloudSearch.documents.BaseDocument;
+import cloudSearch.documents.DeletedDocument;
+import cloudSearch.search.Query;
+import cloudSearch.search.Result;
+import cloudSearch.search.Hit;
+
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.metrics.RequestMetricCollector;
+import com.amazonaws.util.json.JSONArray;
+import com.amazonaws.util.json.JSONException;
+import com.amazonaws.util.json.JSONObject;
+
+
+/**
+ * Created by dan.houseman on 9/14/16.
+ */
+
+public class Client extends com.amazonaws.services.cloudsearchv2.AmazonCloudSearchClient {
+    private String searchEndpoint;
+    private String documentEndpoint;
+
+    /**
+     * Constructs a new client to invoke service methods on CloudSearch.
+     * A credentials provider chain will be used that searches for credentials in this order:
+     * <ul>
+     *  <li> Environment Variables - AWS_ACCESS_KEY_ID and AWS_SECRET_KEY </li>
+     *  <li> Java System Properties - aws.accessKeyId and aws.secretKey </li>
+     *  <li> Instance profile credentials delivered through the Amazon EC2 metadata service </li>
+     * </ul>
+     *
+     * <p>
+     * All service calls made using this new client object are blocking, and will not
+     * return until the service call completes.
+     *
+     * @see DefaultAWSCredentialsProviderChain
+     */
+    public Client() {
+        super(new DefaultAWSCredentialsProviderChain(), new ClientConfiguration());
+    }
+
+    /**
+     * @param clientConfiguration The client configuration options controlling how this client connects to CloudSearch (ex: proxy settings, retry counts, etc.).
+     *
+     * @see DefaultAWSCredentialsProviderChain
+     */
+    public Client(ClientConfiguration clientConfiguration) {
+        super(new DefaultAWSCredentialsProviderChain(), clientConfiguration);
+    }
+
+    /**
+     * @param awsCredentials The AWS credentials (access key ID and secret key) to use
+     *                       when authenticating with AWS services.
+     */
+    public Client(AWSCredentials awsCredentials) {
+        super(awsCredentials, new ClientConfiguration());
+    }
+
+    /**
+     * @param awsCredentials The AWS credentials (access key ID and secret key) to use
+     *                       when authenticating with AWS services.
+     * @param clientConfiguration The client configuration options controlling how this
+     *                       client connects to Cloud Search
+     *                       (ex: proxy settings, retry counts, etc.).
+     */
+    public Client(AWSCredentials awsCredentials, ClientConfiguration clientConfiguration) {
+        super(awsCredentials, clientConfiguration);
+    }
+
+    /**
+     * @param awsCredentialsProvider
+     *            The AWS credentials provider which will provide credentials
+     *            to authenticate documents with AWS services.
+     */
+    public Client(AWSCredentialsProvider awsCredentialsProvider) {
+        super(awsCredentialsProvider, new ClientConfiguration());
+    }
+
+    /**
+     * @param awsCredentialsProvider
+     *            The AWS credentials provider which will provide credentials
+     *            to authenticate documents with AWS services.
+     * @param clientConfiguration The client configuration options controlling how this
+     *                       client connects to Cloud Search
+     *                       (ex: proxy settings, retry counts, etc.).
+     */
+    public Client(AWSCredentialsProvider awsCredentialsProvider, ClientConfiguration clientConfiguration) {
+        super(awsCredentialsProvider, clientConfiguration);
+    }
+
+    /**
+     * @param awsCredentialsProvider
+     *            The AWS credentials provider which will provide credentials
+     *            to authenticate documents with AWS services.
+     * @param clientConfiguration The client configuration options controlling how this
+     *                       client connects to AmazonCloudSearchv2
+     *                       (ex: proxy settings, retry counts, etc.).
+     * @param requestMetricCollector optional request metric collector
+     */
+    public Client(AWSCredentialsProvider awsCredentialsProvider, ClientConfiguration clientConfiguration, RequestMetricCollector requestMetricCollector) {
+        super(awsCredentialsProvider, clientConfiguration, requestMetricCollector);
+    }
+
+    /**
+     * An add operation specifies either a new document that you want to add to the index or an existing document that you want to update.
+     * An add operation is only applied to an existing document if the version number specified in the operation is greater than the existing document's version number.
+     *
+     * @param document The document that need to added or updated
+     * @throws RequestException
+     * @throws ServerException
+     * @throws JSONException
+     */
+    public void addDocument(BaseDocument document) throws RequestException, ServerException, JSONException {
+        JSONArray docs = new JSONArray();
+        docs.put(toJSON(document));
+        updateDocumentRequest(docs.toString());
+    }
+
+    /**
+     * An add operation specifies either new documents that you want to add to the index or existing documents that you want to update.
+     * An add operation is only applied to an existing document if the version number specified in the operation is greater than the existing document's version number.
+     *
+     * @param documents The documents that need to added or updated
+     * @throws JSONException
+     * @throws RequestException
+     * @throws ServerException
+     */
+    public void addDocuments(List<BaseDocument> documents) throws JSONException, RequestException, ServerException {
+        JSONArray docs = new JSONArray();
+        for(BaseDocument doc : documents) {
+            docs.put(toJSON(doc));
+        }
+        updateDocumentRequest(docs.toString());
+    }
+
+
+    /**
+     * A delete operation specifies an existing document that you want to delete.
+     * A delete operation is only applied to an existing document if the version number specified in the operation is greater than the existing document's version number.
+     *
+     * @param document
+     * @throws RequestException
+     * @throws ServerException
+     * @throws JSONException
+     */
+    public void deleteDocument(DeletedDocument document) throws RequestException, ServerException, JSONException {
+        JSONArray docs = new JSONArray();
+        docs.put(toJSON(document));
+        updateDocumentRequest(docs.toString());
+    }
+
+    /**
+     * A delete operation specifies existing documents that you want to delete.
+     * A delete operation is only applied to an existing document if the version number specified in the operation is greater than the existing document's version number.
+     *
+     * @param documents
+     * @throws RequestException
+     * @throws ServerException
+     * @throws JSONException
+     */
+    public void deleteDocuments(List<DeletedDocument> documents) throws JSONException, RequestException, ServerException {
+        JSONArray docs = new JSONArray();
+        for(DeletedDocument doc : documents) {
+            docs.put(toJSON(doc));
+        }
+        updateDocumentRequest(docs.toString());
+    }
+
+    private void updateDocumentRequest(String requestBody) throws RequestException, ServerException {
+        String responseBody = null;
+        try {
+            Response response = Request.Post("https://" + getDocumentEndpoint() + "/2013-01-01/documents/batch")
+                    .useExpectContinue()
+                    .version(HttpVersion.HTTP_1_1)
+                    .addHeader("Content-Type", ContentType.APPLICATION_JSON.getMimeType())
+                    .addHeader("Accept", ContentType.APPLICATION_JSON.getMimeType())
+                    .bodyString(requestBody, ContentType.APPLICATION_JSON)
+                    .execute();
+
+            HttpResponse resp = response.returnResponse();
+            responseBody = inputStreamToString(resp.getEntity().getContent());
+            JSONObject json = new JSONObject(responseBody); // convert it to JSON object
+            responseBody = json.toString(4); // format the json response
+
+            int statusCode = resp.getStatusLine().getStatusCode();
+            if(statusCode >= 400 && statusCode < 500) {
+                throw new RequestException(requestBody, responseBody);
+            } else if(statusCode >= 500 && statusCode < 600){
+                throw new ServerException("Internal Server Error. Please try again as this might be a transient error condition.");
+            }
+        } catch (ClientProtocolException e) {
+            throw new ServerException(e);
+        } catch (IOException e) {
+            throw new ServerException(e);
+        } catch (JSONException e) {
+            throw new ServerException(responseBody, e);
+        }
+    }
+
+    private String inputStreamToString(InputStream in) throws IOException {
+        StringWriter output = new StringWriter();
+        InputStreamReader input = new InputStreamReader(in);
+        char[] buffer = new char[1024 * 4];
+        int n = 0;
+        while (-1 != (n = input.read(buffer))) {
+            output.write(buffer, 0, n);
+        }
+        return output.toString();
+    }
+
+    private Object toJSON(DeletedDocument document) throws JSONException {
+        JSONObject doc = new JSONObject();
+        doc.put("type", "delete");
+        doc.put("id", document.id.toLowerCase());
+        doc.put("version", document.version);
+        return doc;
+    }
+
+    private JSONObject toJSON(BaseDocument document) throws JSONException {
+        JSONObject doc = new JSONObject();
+        doc.put("type", "add");
+        doc.put("id", document.id.toLowerCase());
+        doc.put("version", document.version);
+        doc.put("lang", document.lang);
+
+        JSONObject fields = new JSONObject();
+        for(Map.Entry<String, Object> entry : document.fields.entrySet()) {
+            if(entry.getValue() instanceof Collection) {
+                JSONArray array = new JSONArray();
+                Iterator i = ((Collection)entry.getValue()).iterator();
+                while(i.hasNext()) {
+                    array.put(i.next());
+                }
+                fields.put(entry.getKey(), array);
+            } else {
+                fields.put(entry.getKey(), entry.getValue());
+            }
+        }
+        doc.put("fields", fields);
+        return doc;
+    }
+
+    /**
+     * Get the Search Endpoint set for this Client.
+     *
+     * @return The Search Endpoint
+     */
+    public String getSearchEndpoint() {
+        return searchEndpoint;
+    }
+
+    /**
+     * Set the Search Endpoint for this Client.
+     *
+     * @param searchEndpoint The Search Endpoint
+     */
+    public void setSearchEndpoint(String searchEndpoint) {
+        this.searchEndpoint = searchEndpoint;
+    }
+
+    /**
+     * Get the Document Endpoint set for this Client.
+     *
+     * @return The Document Endpoint
+     */
+    public String getDocumentEndpoint() {
+        return documentEndpoint;
+    }
+
+    /**
+     * Set the Document Endpoint for this Client.
+     *
+     * @param documentEndpoint The Document Endpoint
+     */
+    public void setDocumentEndpoint(String documentEndpoint) {
+        this.documentEndpoint = documentEndpoint;
+    }
+
+    /**
+     * Execute a search and return result.
+     *
+     * @param query search query to be executed.
+     * @return result of the search.
+     * @throws RequestException
+     * @throws IllegalStateException
+     * @throws ServerException
+     * @throws JSONException
+     */
+    public Result search(Query query) throws IllegalStateException, RequestException, ServerException {
+        Result result = null;
+        String responseBody = null;
+        try {
+            Response response = Request.Get("https://" + getSearchEndpoint() + "/2013-01-01/search?" + query.build())
+                    .useExpectContinue()
+                    .version(HttpVersion.HTTP_1_1)
+                    .addHeader("Content-Type", ContentType.APPLICATION_JSON.getMimeType())
+                    .addHeader("Accept", ContentType.APPLICATION_JSON.getMimeType())
+                    .execute();
+
+            HttpResponse resp = response.returnResponse();
+            responseBody = inputStreamToString(resp.getEntity().getContent());
+            JSONObject json = new JSONObject(responseBody); // convert it to JSON object
+            responseBody = json.toString(4); // format the json response
+
+            int statusCode = resp.getStatusLine().getStatusCode();
+
+            if(statusCode >= 400 && statusCode < 500) {
+                throw new RequestException("", responseBody);
+            } else if(statusCode >= 500 && statusCode < 600) {
+                throw new ServerException("Internal Server Error. Please try again as this might be a transient error condition.");
+            }
+
+            result = fromJSON(responseBody);
+
+        } catch (ClientProtocolException e) {
+            throw new ServerException(e);
+        } catch (IOException e) {
+            throw new ServerException(e);
+        } catch (JSONException e) {
+            throw new ServerException(responseBody, e);
+        }
+
+        return result;
+    }
+
+    private Result fromJSON(String responseBody) throws JSONException {
+        Result result = new Result();
+
+        JSONObject root = new JSONObject(responseBody);
+        JSONObject status = root.getJSONObject("status");
+        if(status != null) {
+            result.rid = status.getString("rid");
+            result.time = status.getLong("time-ms");
+        }
+
+        JSONObject hits = root.getJSONObject("hits");
+        if(hits != null) {
+            result.found = hits.getInt("found");
+            result.start = hits.getInt("start");
+            if(result.found > 0) {
+                JSONArray hitArray = hits.getJSONArray("hit");
+                if(hitArray != null) {
+                    for(int i = 0; i < hitArray.length(); i++) {
+                        JSONObject row = hitArray.getJSONObject(i);
+                        Hit hit = new Hit();
+                        hit.id = row.getString("id");
+                        JSONObject fields = row.getJSONObject("fields");
+                        String[] names = JSONObject.getNames(fields);
+                        for(String name : names) {
+                            if(hit.fields == null) {
+                                hit.fields = new HashMap<String, String>();
+                            }
+                            hit.fields.put(name, fields.getString(name));
+                        }
+                        if(result.hits == null) {
+                            result.hits = new ArrayList<Hit>();
+                        }
+                        result.hits.add(hit);
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+}
